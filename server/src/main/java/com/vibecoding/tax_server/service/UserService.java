@@ -14,13 +14,11 @@ public class UserService {
 
     @Transactional
     public String join(String loginId, String password) {
-        // 1. 중복 ID 체크
         userRepository.findByLoginId(loginId)
                 .ifPresent(user -> {
                     throw new RuntimeException("이미 존재하는 아이디입니다.");
                 });
 
-        // 2. 저장 (실제로는 비밀번호 암호화가 필요하지만, 우선 저장부터!)
         User user = new User(loginId, password);
         userRepository.save(user);
 

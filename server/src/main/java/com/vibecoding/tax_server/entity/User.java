@@ -1,4 +1,4 @@
-package com.vibecoding.entity;
+package com.vibecoding.tax_server.entity; // 반드시 tax_server가 포함되어야 합니다.
 
 import jakarta.persistence.*;
 import lombok.Getter;
@@ -10,7 +10,6 @@ import java.util.UUID;
 @Getter
 @NoArgsConstructor
 public class User {
-
     @Id
     @GeneratedValue(strategy = GenerationType.AUTO)
     private UUID userId;
@@ -26,4 +25,3 @@ public class User {
         this.passwordHash = passwordHash;
     }
 }
-    
