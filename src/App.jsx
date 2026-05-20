@@ -23,7 +23,7 @@ import {
   ChevronRight,
 } from "lucide-react";
 
-const API_BASE = "http://localhost:8080";
+const API_BASE = "";
 const FIXED_USER_ID = "11111111-1111-1111-1111-111111111111";
 
 const fallbackFeedbacks = [
@@ -285,7 +285,7 @@ function LoadingScreen({ selectedFile }) {
 
 function Sidebar({ activeTab, setActiveTab, onReset, salary, previewData }) {
   const safePreview = previewData?.previewData || previewData;
-  const totalDeduction = safePreview?.totalDeduction || 246000;
+  const totalDeduction = safePreview?.estimatedTaxReduction || 246000;
 
   return (
     <aside className="hidden h-screen w-72 shrink-0 border-r border-slate-200 bg-white px-5 py-6 lg:sticky lg:top-0 lg:block">
@@ -494,8 +494,11 @@ function FeedbackCard({ item }) {
     tip: "bg-indigo-50 text-indigo-700 ring-indigo-100",
   };
 
-  const cardType = item.severity || item.type || "good";
+  const normalizedType = String(item.severity || item.type || "good").toLowerCase();
+  const cardType = normalizedType === "warn" ? "warning" : normalizedType;
   const Icon = cardType === "warning" ? AlertTriangle : cardType === "tip" ? Sparkles : ShieldCheck;
+  const description = item.description || item.message || "피드백 내용이 없습니다.";
+  const amountLabel = item.amount ?? item.expectedBenefit;
 
   return (
     <motion.div
@@ -527,13 +530,13 @@ function FeedbackCard({ item }) {
 
             <h4 className="font-black text-slate-950">{item.title}</h4>
             <p className="mt-2 text-sm leading-6 text-slate-500">
-              {item.description}
+              {description}
             </p>
           </div>
         </div>
 
         <p className="w-fit shrink-0 rounded-full bg-slate-950 px-3 py-1 text-xs font-bold text-white">
-          {item.amount || "분석 완료"}
+          {typeof amountLabel === "number" ? `${formatWon(amountLabel)}원` : amountLabel || "분석 완료"}
         </p>
       </div>
     </motion.div>
@@ -542,7 +545,7 @@ function FeedbackCard({ item }) {
 
 function HomeDashboard({ selectedFile, salary, previewData }) {
   const safePreview = previewData?.previewData || previewData;
-  const totalDeduction = safePreview?.totalDeduction || 246000;
+  const totalDeduction = safePreview?.estimatedTaxReduction || 246000;
 
   return (
     <motion.div
@@ -842,7 +845,7 @@ function RecentTransactionCard({ transactions }) {
 }
 
 function AssistantFeedbackPreview({ realFeedbacks }) { 
-  const safeFeedbacks = realFeedbacks && realFeedbacks.length > 0 ? realFeedbacks : fallbackFeedbacks;
+  const safeFeedbacks = realFeedbacks && realFeedbacks.length > 0 ? [realFeedbacks[0]] : [fallbackFeedbacks[0]];
 
   return (
     <section className="space-y-4">
@@ -885,7 +888,7 @@ function ReportDashboardPage({ salary, previewData }) {
   const formattedSalary = formatWon(salary);
   const safePreview = previewData?.previewData || previewData;
   const progressPercent = safePreview?.progressPercent || 65;
-  const totalDeduction = safePreview?.totalDeduction || 246000;
+  const totalDeduction = safePreview?.estimatedTaxReduction || 246000;
 
   return (
     <motion.div
@@ -1004,7 +1007,7 @@ function DashboardScreen({ selectedFile, onReset, transactions, feedbacks, previ
 
   const safeTransactions = transactions && transactions.length > 0 ? transactions : fallbackTransactions;
   const safeFeedbacks = feedbacks && feedbacks.length > 0 ? feedbacks : fallbackFeedbacks;
-  const totalDeduction = previewData?.totalDeduction || 246000;
+  const totalDeduction = previewData?.estimatedTaxReduction || 246000;
 
   const renderDashboardPage = () => {
     if (activeTab === "home") {
@@ -1120,10 +1123,15 @@ export default function App() {
       setTransactions(txData);
 
       const fbData = await fetch(`${API_BASE}/api/users/${FIXED_USER_ID}/feedbacks`).then(res => res.json());
-      setFeedbacks(fbData);
+      setFeedbacks(Array.isArray(fbData) ? fbData : []);
 
       const pvData = await fetch(`${API_BASE}/api/deduction-engine/users/${FIXED_USER_ID}/preview`).then(res => res.json());
-      setPreviewData(pvData);
+      const latestBenefit = Array.isArray(fbData) ? (fbData[0]?.expectedBenefit || 0) : 0;
+      if ((pvData?.estimatedTaxReduction || 0) <= 0 && latestBenefit > 0) {
+        setPreviewData({ ...pvData, estimatedTaxReduction: latestBenefit });
+      } else {
+        setPreviewData(pvData);
+      }
 
     } catch (err) {
       console.error("❌ 실시간 연동 중 에러 발생:", err);
