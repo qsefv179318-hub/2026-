@@ -23,69 +23,17 @@ import {
   ChevronRight,
 } from "lucide-react";
 
-const feedbacks = [
-  {
-    id: 1,
-    type: "good",
-    title: "체크카드 공제 구간 활용 가능성이 높습니다",
-    description:
-      "현재 소비 흐름상 신용카드보다 체크카드 사용 비중을 일부 높이면 소득공제 효율을 개선할 여지가 있습니다.",
-    tag: "소득공제",
-    amount: "+84,000원 예상",
-  },
-  {
-    id: 2,
-    type: "warning",
-    title: "의료비 공제 기준 도달까지 여유가 있습니다",
-    description:
-      "의료비 지출은 총급여 기준 일정 비율을 초과해야 공제 효과가 커집니다. 현재는 공제 반영 가능성이 낮은 구간입니다.",
-    tag: "의료비",
-    amount: "기준 미도달",
-  },
-  {
-    id: 3,
-    type: "tip",
-    title: "연금저축 납입 한도 확인이 필요합니다",
-    description:
-      "예상 연봉과 기존 납입액을 기준으로 연금저축 또는 IRP 추가 납입 여부를 검토할 수 있습니다.",
-    tag: "연금/IRP",
-    amount: "검토 추천",
-  },
+const API_BASE = "http://localhost:8080";
+const FIXED_USER_ID = "11111111-1111-1111-1111-111111111111";
+
+const fallbackFeedbacks = [
+  { id: 1, type: "good", title: "체크카드 공제 구간 활용 가능성이 높습니다", description: "현재 소비 흐름상 신용카드보다 체크카드 사용 비중을 일부 높이면 소득공제 효율을 개선할 여지가 있습니다." },
+  { id: 2, type: "warning", title: "의료비 공제 기준 도달까지 여유가 있습니다", description: "의료비 지출은 총급여 기준 일정 비율을 초과해야 공제 효과가 커집니다. 현재는 공제 반영 가능성이 낮은 구간입니다." }
 ];
 
-const recentTransactions = [
-  {
-    id: 1,
-    title: "스타벅스",
-    category: "카페",
-    method: "신용카드",
-    amount: "6,800원",
-    insight: "공제 반영 가능 소비",
-  },
-  {
-    id: 2,
-    title: "약국",
-    category: "의료비",
-    method: "체크카드",
-    amount: "18,000원",
-    insight: "의료비 항목 후보",
-  },
-  {
-    id: 3,
-    title: "대중교통",
-    category: "교통",
-    method: "체크카드",
-    amount: "1,450원",
-    insight: "대중교통 공제 후보",
-  },
-  {
-    id: 4,
-    title: "온라인 쇼핑",
-    category: "생활",
-    method: "신용카드",
-    amount: "52,000원",
-    insight: "일반 소비 항목",
-  },
+const fallbackTransactions = [
+  { id: 1, merchantName: "스타벅스", category: "카페", approvedAt: "2026-05-20", amount: 6800 },
+  { id: 2, merchantName: "약국", category: "의료비", approvedAt: "2026-05-20", amount: 18000 }
 ];
 
 const defaultUploadedFiles = [
@@ -156,9 +104,7 @@ function UploadScreen({ onSelectFile }) {
 
   const handleFileChange = (event) => {
     const file = event.target.files?.[0];
-
     if (!file) return;
-
     onSelectFile(file);
   };
 
@@ -337,7 +283,10 @@ function LoadingScreen({ selectedFile }) {
   );
 }
 
-function Sidebar({ activeTab, setActiveTab, onReset, salary }) {
+function Sidebar({ activeTab, setActiveTab, onReset, salary, previewData }) {
+  const safePreview = previewData?.previewData || previewData;
+  const totalDeduction = safePreview?.totalDeduction || 246000;
+
   return (
     <aside className="hidden h-screen w-72 shrink-0 border-r border-slate-200 bg-white px-5 py-6 lg:sticky lg:top-0 lg:block">
       <div className="flex items-center gap-3 px-2">
@@ -382,7 +331,7 @@ function Sidebar({ activeTab, setActiveTab, onReset, salary }) {
           <ShieldCheck size={22} />
         </div>
         <p className="text-sm font-bold">올해 절세 가능성</p>
-        <p className="mt-2 text-2xl font-black">246,000원</p>
+        <p className="mt-2 text-2xl font-black">{formatWon(totalDeduction)}원</p>
         <p className="mt-2 text-xs leading-5 text-slate-300">
           예상 연봉 {formatWon(salary)}원 기준의 시연용 추정값입니다.
         </p>
@@ -473,10 +422,10 @@ function StatCard({ icon: Icon, label, value, caption }) {
   return (
     <div className="rounded-[1.75rem] bg-white p-5 shadow-sm ring-1 ring-slate-100">
       <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-slate-100 text-slate-800">
-        <Icon size={22} />
+        {Icon && <Icon size={22} />}
       </div>
       <p className="text-sm font-bold text-slate-400">{label}</p>
-      <p className="mt-2 text-2xl font-black text-slate-950">{value}</p>
+      <p className="mt-2 text-2xl font-black text-slate-950">{value || "0원"}</p>
       <p className="mt-2 text-xs leading-5 text-slate-500">{caption}</p>
     </div>
   );
@@ -545,12 +494,8 @@ function FeedbackCard({ item }) {
     tip: "bg-indigo-50 text-indigo-700 ring-indigo-100",
   };
 
-  const Icon =
-    item.type === "warning"
-      ? AlertTriangle
-      : item.type === "tip"
-        ? Sparkles
-        : ShieldCheck;
+  const cardType = item.severity || item.type || "good";
+  const Icon = cardType === "warning" ? AlertTriangle : cardType === "tip" ? Sparkles : ShieldCheck;
 
   return (
     <motion.div
@@ -564,7 +509,7 @@ function FeedbackCard({ item }) {
           <div
             className={cn(
               "flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl ring-1",
-              styles[item.type]
+              styles[cardType] || styles.good
             )}
           >
             <Icon size={22} />
@@ -573,7 +518,7 @@ function FeedbackCard({ item }) {
           <div>
             <div className="mb-2 flex flex-wrap items-center gap-2">
               <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-bold text-slate-600">
-                {item.tag}
+                {item.tag || "공제항목"}
               </span>
               <span className="text-xs font-bold text-slate-400">
                 실시간 피드백
@@ -588,15 +533,16 @@ function FeedbackCard({ item }) {
         </div>
 
         <p className="w-fit shrink-0 rounded-full bg-slate-950 px-3 py-1 text-xs font-bold text-white">
-          {item.amount}
+          {item.amount || "분석 완료"}
         </p>
       </div>
     </motion.div>
   );
 }
 
-function HomeDashboard({ selectedFile, salary }) {
-  const formattedSalary = formatWon(salary);
+function HomeDashboard({ selectedFile, salary, previewData }) {
+  const safePreview = previewData?.previewData || previewData;
+  const totalDeduction = safePreview?.totalDeduction || 246000;
 
   return (
     <motion.div
@@ -633,7 +579,7 @@ function HomeDashboard({ selectedFile, salary }) {
               )}
 
               <div className="w-fit rounded-2xl bg-white/10 px-4 py-3 text-sm font-bold text-slate-200">
-                예상 연봉: {formattedSalary}원
+                예상 연봉: {formatWon(salary)}원
               </div>
             </div>
           </div>
@@ -670,7 +616,7 @@ function HomeDashboard({ selectedFile, salary }) {
         <StatCard
           icon={Wallet}
           label="예상 연봉"
-          value={`${formattedSalary}원`}
+          value={`${formatWon(salary)}원`}
           caption="사용자가 입력한 올해 예상 총급여"
         />
         <StatCard
@@ -682,8 +628,8 @@ function HomeDashboard({ selectedFile, salary }) {
         <StatCard
           icon={ShieldCheck}
           label="예상 절세 효과"
-          value="246,000원"
-          caption="입력 자료 기반의 참고용 예상값"
+          value={`${formatWon(totalDeduction)}원`}
+          caption="입력 자료 기반의 실시간 계산값"
         />
         <StatCard
           icon={Landmark}
@@ -691,11 +637,6 @@ function HomeDashboard({ selectedFile, salary }) {
           value="5개"
           caption="카드, 의료비, 교통, 연금 항목 포함"
         />
-      </section>
-
-      <section className="grid gap-6 xl:grid-cols-[0.95fr_1.05fr]">
-        <RecentTransactionCard />
-        <AssistantFeedbackPreview />
       </section>
     </motion.div>
   );
@@ -849,7 +790,9 @@ function SalaryDashboardPage({ salary, setSalary }) {
   );
 }
 
-function RecentTransactionCard() {
+function RecentTransactionCard({ transactions }) {
+  const safeTransactions = transactions && transactions.length > 0 ? transactions : fallbackTransactions;
+
   return (
     <section className="rounded-[2rem] bg-white p-6 shadow-sm ring-1 ring-slate-100">
       <div className="mb-6 flex items-center justify-between">
@@ -863,9 +806,9 @@ function RecentTransactionCard() {
       </div>
 
       <div className="space-y-3">
-        {recentTransactions.map((transaction) => (
+        {safeTransactions.map((transaction, idx) => (
           <div
-            key={transaction.id}
+            key={idx}
             className="flex items-center justify-between gap-4 rounded-2xl bg-slate-50 p-4"
           >
             <div className="flex min-w-0 items-center gap-3">
@@ -875,20 +818,20 @@ function RecentTransactionCard() {
 
               <div className="min-w-0">
                 <p className="truncate font-black text-slate-950">
-                  {transaction.title}
+                  {transaction.merchantName || transaction.title || "지출 내역"}
                 </p>
                 <p className="truncate text-xs text-slate-500">
-                  {transaction.category} · {transaction.method}
+                  {transaction.category || "일반"} · {transaction.approvedAt || transaction.method || "최근"}
                 </p>
               </div>
             </div>
 
             <div className="shrink-0 text-right">
               <p className="font-black text-slate-950">
-                {transaction.amount}
+                {typeof transaction.amount === "number" ? `${formatWon(transaction.amount)}원` : transaction.amount}
               </p>
               <p className="mt-1 text-xs font-bold text-emerald-600">
-                {transaction.insight}
+                {transaction.insight || "공제 반영 후보"}
               </p>
             </div>
           </div>
@@ -898,9 +841,8 @@ function RecentTransactionCard() {
   );
 }
 
-
 function AssistantFeedbackPreview({ realFeedbacks }) { 
-  const displayFeedbacks = realFeedbacks && realFeedbacks.length > 0 ? realFeedbacks : feedbacks;
+  const safeFeedbacks = realFeedbacks && realFeedbacks.length > 0 ? realFeedbacks : fallbackFeedbacks;
 
   return (
     <section className="space-y-4">
@@ -917,14 +859,14 @@ function AssistantFeedbackPreview({ realFeedbacks }) {
           </div>
         </div>
       </div>
-      {displayFeedbacks.map((item) => (
-        <FeedbackCard key={item.id} item={item} />
+      {safeFeedbacks.map((item, idx) => (
+        <FeedbackCard key={idx} item={item} />
       ))}
     </section>
   );
 }
 
-function FeedbackDashboardPage() {
+function FeedbackDashboardPage({ transactions, feedbacks }) {
   return (
     <motion.div
       key="feedback"
@@ -933,14 +875,17 @@ function FeedbackDashboardPage() {
       transition={{ duration: 0.35 }}
       className="grid gap-6 xl:grid-cols-[0.95fr_1.05fr]"
     >
-      <RecentTransactionCard />
-      <AssistantFeedbackPreview />
+      <RecentTransactionCard transactions={transactions} />
+      <AssistantFeedbackPreview realFeedbacks={feedbacks} />
     </motion.div>
   );
 }
 
-function ReportDashboardPage({ salary }) {
+function ReportDashboardPage({ salary, previewData }) {
   const formattedSalary = formatWon(salary);
+  const safePreview = previewData?.previewData || previewData;
+  const progressPercent = safePreview?.progressPercent || 65;
+  const totalDeduction = safePreview?.totalDeduction || 246000;
 
   return (
     <motion.div
@@ -960,7 +905,7 @@ function ReportDashboardPage({ salary }) {
         <StatCard
           icon={ShieldCheck}
           label="예상 절세"
-          value="246,000원"
+          value={`${formatWon(totalDeduction)}원`}
           caption="현재 입력 자료 기준의 참고용 추정값"
         />
         <StatCard
@@ -995,7 +940,7 @@ function ReportDashboardPage({ salary }) {
 
         <div className="mt-6 space-y-5">
           {[
-            ["카드 사용액", "72%"],
+            ["카드 사용액", `${progressPercent}%`],
             ["의료비", "38%"],
             ["연금저축/IRP", "54%"],
             ["대중교통", "66%"],
@@ -1053,14 +998,17 @@ function ReportDashboardPage({ salary }) {
   );
 }
 
-
-function DashboardScreen({ selectedFile, onReset, realFeedbacks }) { 
+function DashboardScreen({ selectedFile, onReset, transactions, feedbacks, previewData, isRefreshing }) { 
   const [activeTab, setActiveTab] = useState("home");
   const [salary, setSalary] = useState("42000000");
 
+  const safeTransactions = transactions && transactions.length > 0 ? transactions : fallbackTransactions;
+  const safeFeedbacks = feedbacks && feedbacks.length > 0 ? feedbacks : fallbackFeedbacks;
+  const totalDeduction = previewData?.totalDeduction || 246000;
+
   const renderDashboardPage = () => {
     if (activeTab === "home") {
-      return <HomeDashboard selectedFile={selectedFile} salary={salary} />;
+      return <HomeDashboard selectedFile={selectedFile} salary={salary} previewData={previewData} />;
     }
     if (activeTab === "upload") {
       return <UploadDashboardPage selectedFile={selectedFile} />;
@@ -1069,18 +1017,25 @@ function DashboardScreen({ selectedFile, onReset, realFeedbacks }) {
       return <SalaryDashboardPage salary={salary} setSalary={setSalary} />;
     }
     if (activeTab === "feedback") {
-      return <FeedbackDashboardPage />;
+      return <FeedbackDashboardPage transactions={safeTransactions} feedbacks={safeFeedbacks} />;
     }
     if (activeTab === "report") {
-      return <ReportDashboardPage salary={salary} />;
+      return <ReportDashboardPage salary={salary} previewData={previewData} />;
     }
-    return <HomeDashboard selectedFile={selectedFile} salary={salary} />;
+    return <HomeDashboard selectedFile={selectedFile} salary={salary} previewData={previewData} />;
   };
 
   return (
     <div className="min-h-screen bg-slate-50 text-slate-950">
+      {isRefreshing && (
+        <div className="bg-slate-900 text-white text-xs font-bold py-2 text-center sticky top-0 z-50 flex items-center justify-center gap-2">
+          <div className="h-3 w-3 animate-spin rounded-full border-2 border-white/20 border-t-white" />
+          실시간 분석 데이터 업데이트 중...
+        </div>
+      )}
+
       <div className="flex min-h-screen">
-        <Sidebar activeTab={activeTab} setActiveTab={setActiveTab} onReset={onReset} salary={salary} />
+        <Sidebar activeTab={activeTab} setActiveTab={setActiveTab} onReset={onReset} salary={salary} previewData={previewData} />
         <div className="min-w-0 flex-1 pb-24 lg:pb-0">
           <Topbar activeTab={activeTab} />
           <main className="mx-auto max-w-7xl px-4 py-6 md:px-8 md:py-8">
@@ -1088,10 +1043,10 @@ function DashboardScreen({ selectedFile, onReset, realFeedbacks }) {
 
             {activeTab === "home" || activeTab === "feedback" ? (
               <div className="space-y-6">
-                {activeTab === "home" && <HomeDashboard selectedFile={selectedFile} salary={salary} />}
+                {activeTab === "home" && <HomeDashboard selectedFile={selectedFile} salary={salary} previewData={previewData} />}
                 <section className="grid gap-6 xl:grid-cols-[0.95fr_1.05fr]">
-                  {activeTab === "home" && <RecentTransactionCard />}
-                  <AssistantFeedbackPreview realFeedbacks={realFeedbacks} /> {/* 👈 여기에 배달! */}
+                  {activeTab === "home" && <RecentTransactionCard transactions={safeTransactions} />}
+                  <AssistantFeedbackPreview realFeedbacks={safeFeedbacks} />
                 </section>
               </div>
             ) : (
@@ -1115,8 +1070,13 @@ export default function App() {
   const [screen, setScreen] = useState("UPLOAD");
   const [selectedFile, setSelectedFile] = useState(null);
 
-  const [userId, setUserId] = useState(null);            
-  const [realFeedbacks, setRealFeedbacks] = useState([]); 
+  const [transactions, setTransactions] = useState([]);
+  const [feedbacks, setFeedbacks] = useState([]);
+  const [previewData, setPreviewData] = useState(null); 
+
+  const [isLoading, setIsLoading] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [error, setError] = useState(null);
 
   const handleSelectFile = (file) => {
     setSelectedFile(file);
@@ -1126,35 +1086,55 @@ export default function App() {
   const handleResetDemo = () => {
     setSelectedFile(null);
     setScreen("UPLOAD");
-    setRealFeedbacks([]); 
+    setTransactions([]);
+    setFeedbacks([]);
+    setPreviewData(null);
   };
 
-  
   useEffect(() => {
-    if (screen !== "LOADING") return;
+    if (screen !== "DASHBOARD") {
+      if (screen === "LOADING") {
+        const timer = setTimeout(() => setScreen("DASHBOARD"), 3000);
+        return () => clearTimeout(timer);
+      }
+      return;
+    }
 
-    const timer = setTimeout(() => {
-      setScreen("DASHBOARD");
-    }, 3000);
+    const syncTaxData = async () => {
+    try {
+      setIsRefreshing(true);
+      
+      await fetch(`${API_BASE}/api/sync`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          userId: FIXED_USER_ID,
+          connectedId: "test_connected_id",
+          organization: "test_org"
+        })
+      }).then(res => res.json());
 
-    
-    fetch("http://localhost:8080/deduction-engine/users/11111111-1111-1111-1111-111111111111/preview")
-      .then((response) => {
-        if (!response.ok) {
-          throw new Error("백엔드 엔진 응답 실패");
-        }
-        return response.json();
-      })
-      .then((data) => {
-        setRealFeedbacks(Array.isArray(data) ? data : [data]);
-        console.log("🏅 [소름주의] 도커 백엔드 엔진 진짜 최종 연동 성공!!!:", data);
-      })
-      .catch((error) => {
-        console.error("❌ 연결 에러:", error);
-        setRealFeedbacks(feedbacks); 
-      });
+      const txData = await fetch(`${API_BASE}/api/mock/transactions?userId=${FIXED_USER_ID}`).then(res => res.json());
+      setTransactions(txData);
 
-    return () => clearTimeout(timer);
+      const fbData = await fetch(`${API_BASE}/api/users/${FIXED_USER_ID}/feedbacks`).then(res => res.json());
+      setFeedbacks(fbData);
+
+      const pvData = await fetch(`${API_BASE}/api/deduction-engine/users/${FIXED_USER_ID}/preview`).then(res => res.json());
+      setPreviewData(pvData);
+
+    } catch (err) {
+      console.error("❌ 실시간 연동 중 에러 발생:", err);
+      setError(err.message);
+    } finally {
+      setIsLoading(false);
+      setIsRefreshing(false);
+    }
+  };
+
+    syncTaxData();
   }, [screen]);
 
   if (screen === "UPLOAD") {
@@ -1169,7 +1149,10 @@ export default function App() {
     <DashboardScreen 
       selectedFile={selectedFile} 
       onReset={handleResetDemo} 
-      realFeedbacks={realFeedbacks} 
+      transactions={transactions}
+      feedbacks={feedbacks}
+      previewData={previewData}
+      isRefreshing={isRefreshing}
     />
   );
 }
