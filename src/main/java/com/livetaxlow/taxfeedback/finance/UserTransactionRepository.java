@@ -12,6 +12,8 @@ public interface UserTransactionRepository extends JpaRepository<UserTransaction
 
     Optional<UserTransaction> findByUserIdAndSourceAndExternalTxId(UUID userId, String source, String externalTxId);
 
+    void deleteByUserIdAndSource(UUID userId, String source);
+
     List<UserTransaction> findByUserIdOrderByApprovedAtDesc(UUID userId);
 
     List<UserTransaction> findTop5ByUserIdOrderByApprovedAtDesc(UUID userId);

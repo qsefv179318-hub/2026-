@@ -108,6 +108,9 @@ public class SyncService {
         int importedCount = 0;
         int duplicateSkippedCount = 0;
         String sourceLabel = resolveSourceLabel();
+        if ("MOCK".equals(sourceLabel)) {
+            userTransactionRepository.deleteByUserIdAndSource(userId, sourceLabel);
+        }
         for (FetchedTransaction row : rows) {
             String approvalNo = row.approvalNo();
             if (approvalNo == null || approvalNo.isBlank()) {
@@ -139,7 +142,13 @@ public class SyncService {
             importedCount++;
         }
 
-        return new SyncResponse(startDate, endDate, importedCount, duplicateSkippedCount);
+        SyncResponse syncResponse = new SyncResponse(startDate, endDate, importedCount, duplicateSkippedCount);
+
+        int taxYear = LocalDate.now(KOREA_ZONE).getYear();
+        RuleBasedDeductionResult deduction = deductionEngineService.preview(userId, taxYear);
+        syncAiFeedbackService.generateAndSave(userId, syncResponse, deduction);
+
+        return syncResponse;
     }
 
     private ExpenseCategory resolveExpenseCategory(InternalTransactionCategory category, String paymentMethod) {
