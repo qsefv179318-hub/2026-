@@ -1,0 +1,27 @@
+[
+  {
+    "approvalNo": "MOCK-20260520-0001",
+    "merchantName": "서울메디컬의원",
+    "storeType": "병원",
+    "amount": 42000,
+    "paymentMethod": "CREDIT",
+    "approvedAt": "2026-05-18 10:21:14"
+  },
+  {
+    "approvalNo": "MOCK-20260520-0002",
+    "merchantName": "강남역편의점",
+    "storeType": "소매",
+    "amount": 7800,
+    "paymentMethod": "DEBIT",
+    "approvedAt": "2026-05-19 21:03:55"
+  },
+  {
+    "approvalNo": "MOCK-20260520-0003",
+    "merchantName": "서울시버스",
+    "storeType": "대중교통",
+    "amount": 1500,
+    "paymentMethod": "CREDIT",
+    "approvedAt": "2026-05-20 08:31:02"
+  }
+]
+

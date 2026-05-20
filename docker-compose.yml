@@ -1,0 +1,43 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: livetaxlow-postgres
+    environment:
+      POSTGRES_DB: livetaxlow
+      POSTGRES_USER: livetaxlow
+      POSTGRES_PASSWORD: livetaxlow
+    ports:
+      - "15432:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U livetaxlow -d livetaxlow"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: livetaxlow-backend
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DB_URL: jdbc:postgresql://postgres:5432/livetaxlow
+      DB_USERNAME: ${DB_USERNAME:-livetaxlow}
+      DB_PASSWORD: ${DB_PASSWORD:-livetaxlow}
+      SERVER_PORT: 8080
+      CODEF_ENABLED: ${CODEF_ENABLED:-false}
+      CODEF_CLIENT_ID: ${CODEF_CLIENT_ID:-}
+      CODEF_CLIENT_SECRET: ${CODEF_CLIENT_SECRET:-}
+      CODEF_PUBLIC_KEY: ${CODEF_PUBLIC_KEY:-}
+      SYNC_SOURCE_TYPE: ${SYNC_SOURCE_TYPE:-mock}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      OPENAI_MODEL: ${OPENAI_MODEL:-gpt-5.4-mini}
+    ports:
+      - "8080:8080"
+
+volumes:
+  postgres-data:

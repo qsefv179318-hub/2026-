@@ -1,0 +1,61 @@
+spring:
+  application:
+    name: tax-feedback
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://localhost:15432/livetaxlow}
+    username: ${DB_USERNAME:livetaxlow}
+    password: ${DB_PASSWORD:livetaxlow}
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    open-in-view: false
+    properties:
+      hibernate:
+        format_sql: true
+  flyway:
+    enabled: true
+
+server:
+  port: ${SERVER_PORT:8080}
+
+tax:
+  rules:
+    external-base-url: ${TAX_RULES_EXTERNAL_BASE_URL:}
+
+toss:
+  payments:
+    base-url: ${TOSS_PAYMENTS_BASE_URL:https://api.tosspayments.com}
+    secret-key: ${TOSS_SECRET_KEY:}
+
+openai:
+  api-key: ${OPENAI_API_KEY:}
+  base-url: ${OPENAI_BASE_URL:https://api.openai.com}
+  model: ${OPENAI_MODEL:gpt-5.4-mini}
+
+codef:
+  enabled: ${CODEF_ENABLED:false}
+  base-url: ${CODEF_BASE_URL:https://api.codef.io}
+  token-path: ${CODEF_TOKEN_PATH:/oauth/token}
+  account-create-path: ${CODEF_ACCOUNT_CREATE_PATH:/v1/account/create}
+  transaction-path: ${CODEF_TRANSACTION_PATH:/v1/kr/card/p/account/approval-list}
+  client-id: ${CODEF_CLIENT_ID:}
+  client-secret: ${CODEF_CLIENT_SECRET:}
+  public-key: ${CODEF_PUBLIC_KEY:}
+  response-list-path: ${CODEF_RESPONSE_LIST_PATH:data.resList}
+  field-mapping:
+    tx-id: ${CODEF_FIELD_TX_ID:resApprovalNo}
+    tx-date: ${CODEF_FIELD_TX_DATE:resUsedDate}
+    tx-time: ${CODEF_FIELD_TX_TIME:resUsedTime}
+    amount: ${CODEF_FIELD_AMOUNT:resUsedAmount}
+    merchant: ${CODEF_FIELD_MERCHANT:resMemberStoreName}
+    mcc: ${CODEF_FIELD_MCC:resMemberStoreTypeCode}
+    payment-method: ${CODEF_FIELD_PAYMENT_METHOD:resPaymentType}
+
+sync:
+  source:
+    type: ${SYNC_SOURCE_TYPE:codef}
+    mock-file: ${SYNC_SOURCE_MOCK_FILE:mock/mock-data.json}
+
+springdoc:
+  swagger-ui:
+    path: /docs
