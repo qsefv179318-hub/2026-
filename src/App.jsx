@@ -171,7 +171,7 @@ function UploadScreen({ onSelectFile }) {
               <PiggyBank size={24} />
             </div>
             <div>
-              <h1 className="text-xl font-black tracking-tight">LiveTaxLow</h1>
+              <h1 className="text-xl font-black tracking-tight">TaxNow</h1>
               <p className="text-xs font-bold text-slate-400">
                 실시간 절세 피드백 웹앱
               </p>
@@ -202,7 +202,7 @@ function UploadScreen({ onSelectFile }) {
 
             <p className="mt-6 max-w-2xl text-base leading-8 text-slate-500">
               거래내역 파일, 연말정산 간소화 파일, 카드 사용 내역 등을
-              업로드하면 LiveTaxLow AI 엔진이 공제 후보 항목과 절세 가능성을
+              업로드하면 TaxNow AI 엔진이 공제 후보 항목과 절세 가능성을
               분석합니다.
             </p>
 
@@ -298,11 +298,11 @@ function LoadingScreen({ selectedFile }) {
 
         <div className="mb-5 inline-flex items-center gap-2 rounded-full bg-white/10 px-4 py-2 text-sm font-bold text-slate-200 ring-1 ring-white/10">
           <Sparkles size={17} />
-          LiveTaxLow AI Engine
+          TaxNow AI Engine
         </div>
 
         <h1 className="text-3xl font-black tracking-tight md:text-5xl">
-          LiveTaxLow AI 엔진이
+          TaxNow AI 엔진이
           <br />
           거래 내역을 분석 중입니다...
         </h1>
@@ -346,7 +346,7 @@ function Sidebar({ activeTab, setActiveTab, onReset, salary }) {
         </div>
         <div>
           <h1 className="text-lg font-black tracking-tight text-slate-950">
-            LiveTaxLow
+            TaxNow
           </h1>
           <p className="text-xs font-semibold text-slate-400">
             절세 피드백 웹앱
@@ -444,7 +444,7 @@ function Topbar({ activeTab }) {
           </button>
           <div>
             <p className="text-xs font-bold text-slate-400">
-              LiveTaxLow Web App
+              TaxNow Web App
             </p>
             <h2 className="text-xl font-black text-slate-950 md:text-2xl">
               {titleMap[activeTab]}
@@ -898,25 +898,26 @@ function RecentTransactionCard() {
   );
 }
 
-function AssistantFeedbackPreview() {
+
+function AssistantFeedbackPreview({ realFeedbacks }) { 
+  const displayFeedbacks = realFeedbacks && realFeedbacks.length > 0 ? realFeedbacks : feedbacks;
+
   return (
     <section className="space-y-4">
       <div className="rounded-[2rem] bg-white p-6 shadow-sm ring-1 ring-slate-100">
         <div className="flex items-center justify-between">
           <div>
-            <p className="text-sm font-bold text-slate-400">LiveTaxLow AI</p>
+            <p className="text-sm font-bold text-slate-400">TaxNow AI</p>
             <h3 className="text-xl font-black text-slate-950">
               실시간 절세 어시스턴트 알림
             </h3>
           </div>
-
           <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-slate-950 text-white">
             <Sparkles size={22} />
           </div>
         </div>
       </div>
-
-      {feedbacks.map((item) => (
+      {displayFeedbacks.map((item) => (
         <FeedbackCard key={item.id} item={item} />
       ))}
     </section>
@@ -1052,7 +1053,8 @@ function ReportDashboardPage({ salary }) {
   );
 }
 
-function DashboardScreen({ selectedFile, onReset }) {
+
+function DashboardScreen({ selectedFile, onReset, realFeedbacks }) { 
   const [activeTab, setActiveTab] = useState("home");
   const [salary, setSalary] = useState("42000000");
 
@@ -1060,55 +1062,50 @@ function DashboardScreen({ selectedFile, onReset }) {
     if (activeTab === "home") {
       return <HomeDashboard selectedFile={selectedFile} salary={salary} />;
     }
-
     if (activeTab === "upload") {
       return <UploadDashboardPage selectedFile={selectedFile} />;
     }
-
     if (activeTab === "salary") {
       return <SalaryDashboardPage salary={salary} setSalary={setSalary} />;
     }
-
     if (activeTab === "feedback") {
       return <FeedbackDashboardPage />;
     }
-
     if (activeTab === "report") {
       return <ReportDashboardPage salary={salary} />;
     }
-
     return <HomeDashboard selectedFile={selectedFile} salary={salary} />;
   };
 
   return (
     <div className="min-h-screen bg-slate-50 text-slate-950">
       <div className="flex min-h-screen">
-        <Sidebar
-          activeTab={activeTab}
-          setActiveTab={setActiveTab}
-          onReset={onReset}
-          salary={salary}
-        />
-
+        <Sidebar activeTab={activeTab} setActiveTab={setActiveTab} onReset={onReset} salary={salary} />
         <div className="min-w-0 flex-1 pb-24 lg:pb-0">
           <Topbar activeTab={activeTab} />
-
           <main className="mx-auto max-w-7xl px-4 py-6 md:px-8 md:py-8">
-            {renderDashboardPage()}
+            
+
+            {activeTab === "home" || activeTab === "feedback" ? (
+              <div className="space-y-6">
+                {activeTab === "home" && <HomeDashboard selectedFile={selectedFile} salary={salary} />}
+                <section className="grid gap-6 xl:grid-cols-[0.95fr_1.05fr]">
+                  {activeTab === "home" && <RecentTransactionCard />}
+                  <AssistantFeedbackPreview realFeedbacks={realFeedbacks} /> {/* 👈 여기에 배달! */}
+                </section>
+              </div>
+            ) : (
+              renderDashboardPage()
+            )}
 
             <div className="mt-6 pb-6 lg:hidden">
-              <button
-                onClick={onReset}
-                className="flex w-full items-center justify-center gap-2 rounded-2xl bg-slate-950 px-5 py-4 text-sm font-black text-white"
-              >
-                <RotateCcw size={18} />
-                시연 다시 시작
+              <button onClick={onReset} className="flex w-full items-center justify-center gap-2 rounded-2xl bg-slate-950 px-5 py-4 text-sm font-black text-white">
+                <RotateCcw size={18} /> 시연 다시 시작
               </button>
             </div>
           </main>
         </div>
       </div>
-
       <MobileBottomNav activeTab={activeTab} setActiveTab={setActiveTab} />
     </div>
   );
@@ -1118,6 +1115,9 @@ export default function App() {
   const [screen, setScreen] = useState("UPLOAD");
   const [selectedFile, setSelectedFile] = useState(null);
 
+  const [userId, setUserId] = useState(null);            
+  const [realFeedbacks, setRealFeedbacks] = useState([]); 
+
   const handleSelectFile = (file) => {
     setSelectedFile(file);
     setScreen("LOADING");
@@ -1126,14 +1126,33 @@ export default function App() {
   const handleResetDemo = () => {
     setSelectedFile(null);
     setScreen("UPLOAD");
+    setRealFeedbacks([]); 
   };
 
+  
   useEffect(() => {
     if (screen !== "LOADING") return;
 
     const timer = setTimeout(() => {
       setScreen("DASHBOARD");
     }, 3000);
+
+    
+    fetch("http://localhost:8080/deduction-engine/users/11111111-1111-1111-1111-111111111111/preview")
+      .then((response) => {
+        if (!response.ok) {
+          throw new Error("백엔드 엔진 응답 실패");
+        }
+        return response.json();
+      })
+      .then((data) => {
+        setRealFeedbacks(Array.isArray(data) ? data : [data]);
+        console.log("🏅 [소름주의] 도커 백엔드 엔진 진짜 최종 연동 성공!!!:", data);
+      })
+      .catch((error) => {
+        console.error("❌ 연결 에러:", error);
+        setRealFeedbacks(feedbacks); 
+      });
 
     return () => clearTimeout(timer);
   }, [screen]);
@@ -1147,6 +1166,10 @@ export default function App() {
   }
 
   return (
-    <DashboardScreen selectedFile={selectedFile} onReset={handleResetDemo} />
+    <DashboardScreen 
+      selectedFile={selectedFile} 
+      onReset={handleResetDemo} 
+      realFeedbacks={realFeedbacks} 
+    />
   );
 }
